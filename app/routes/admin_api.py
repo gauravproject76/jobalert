@@ -39,7 +39,7 @@ class SearchModel(BaseModel):
 @router.get("/admin/api/posts")
 async def get_posts():
     cursor = Scrapeed.find({"posted": "No"}, {
-        "title": 1, "url": 1, "section": 1, "sup": 1,
+        "_id": 0, "title": 1, "url": 1, "section": 1, "sup": 1,
         "order_no": 1, "posted": 1, "updated_at": 1
     }).sort("updated_at", -1)
     posts = await cursor.to_list(length=100)
