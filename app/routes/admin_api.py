@@ -16,7 +16,7 @@ router = APIRouter(dependencies=[Depends(verify_api_key)])
 client = AsyncIOMotorClient(os.getenv("MONGO_URI"))
 db = client["rojgar"]
 Device = db["devices"]
-Scrapeed = db["scrapeeds"]
+Scrapeed = db["Scrapeed"]
 Post = db["posts"]
 
 # Env secret
