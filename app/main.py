@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
-from app.routes import scrape_api, trigger_scrape, register_user
+from app.routes import admin_api, user_api, register_user
 
 app = FastAPI()
 
@@ -19,6 +19,6 @@ app.add_middleware(
 )
 
 # ✅ Register routes
-app.include_router(scrape_api.router)
-app.include_router(trigger_scrape.router)
+app.include_router(admin_api.router)
+app.include_router(user_api.router)
 app.include_router(register_user.router)
