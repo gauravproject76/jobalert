@@ -22,3 +22,7 @@ app.add_middleware(
 app.include_router(admin_api.router)
 app.include_router(user_api.router)
 app.include_router(register_user.router)
+
+
+for route in app.routes:
+    print(f"{route.path} [{','.join(route.methods)}]")
