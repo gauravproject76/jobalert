@@ -6,9 +6,10 @@ from app.routes import admin_api, user_api, register_user
 app = FastAPI()
 
 # ✅ Root endpoint - open (no API key)
-@app.get("/", response_class=PlainTextResponse)
+@app.api_route("/", methods=["GET", "HEAD"])
 def read_root():
-    return "Job Alert API is live 🚀"
+    return PlainTextResponse("Job Alert API is live 🚀")
+
 
 # ✅ CORS
 app.add_middleware(
