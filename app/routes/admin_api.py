@@ -7,6 +7,7 @@ from app.deps.auth import verify_api_key
 from app.core.scraper import scrape_and_update
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
+from bson import ObjectId
 
 load_dotenv()
 
@@ -21,6 +22,7 @@ Post = db["posts"]
 
 # Env secret
 SECRET_KEY = os.getenv("SECRET_KEY", "demo-key")
+
 
 # ---------- MODELS ----------
 class PostModel(BaseModel):
@@ -38,26 +40,53 @@ class SearchModel(BaseModel):
 # ---------- ADMIN UTILS ----------
 @router.get("/admin/api/posts")
 async def get_posts():
-    cursor = Scrapeed.find({"posted": "No"}, {
-        "_id": 0, "title": 1, "url": 1, "section": 1, "sup": 1,
-        "order_no": 1, "posted": 1, "updated_at": 1
-    }).sort("updated_at", -1)
+    cursor = Scrapeed.find(
+        {"posted": "No"},
+        {
+            "title": 1,
+            "url": 1,
+            "section": 1,
+            "sup": 1,
+            "order_no": 1,
+            "posted": 1,
+            "updated_at": 1,
+            "_id": 1
+        }
+    ).sort("updated_at", -1)
+
     posts = await cursor.to_list(length=100)
+
+    for post in posts:
+        if "_id" in post and isinstance(post["_id"], ObjectId):
+            post["_id"] = str(post["_id"])
+
     return posts
+
 
 @router.post("/admin/api/search-posts")
 async def search_posts(data: SearchModel):
-    if data.keyword:
-        posts = await Post.find(
-            {"title": {"$regex": data.keyword, "$options": "i"}},
-            {"title": 1, "url": 1, "category": 1, "sup": 1, "updated_at": 1}
-        ).sort("updated_at", -1).to_list(length=20)
-    else:
-        posts = await Post.find({}, {
-            "title": 1, "url": 1, "category": 1, "sup": 1, "updated_at": 1
-        }).sort("updated_at", -1).limit(10).to_list(length=10)
+    query = {"title": {"$regex": data.keyword, "$options": "i"}} if data.keyword else {}
+
+    cursor = Post.find(
+        query,
+        {
+            "title": 1,
+            "url": 1,
+            "category": 1,
+            "sup": 1,
+            "updated_at": 1,
+            "_id": 1
+        }
+    ).sort("updated_at", -1)
+
+    posts = await cursor.to_list(length=20 if data.keyword else 10)
+
+    for post in posts:
+        if "_id" in post and isinstance(post["_id"], ObjectId):
+            post["_id"] = str(post["_id"])
 
     return {"posts": posts}
+
 
 @router.post("/admin/api/add-posts")
 async def add_or_update_post(data: PostModel):
@@ -79,7 +108,6 @@ async def add_or_update_post(data: PostModel):
         await Post.insert_one(data.dict())
         msg = "✅ Post created"
 
-    # Update Scrapeed status
     updated = await Scrapeed.find_one_and_update(
         {"title": data.title.strip()},
         {"$set": {"posted": "Yes"}},
@@ -93,6 +121,7 @@ async def add_or_update_post(data: PostModel):
         )
 
     return {"success": True, "message": msg, "post": data.dict()}
+
 
 @router.get("/admin/api/scrape-for-tr")
 def scrape_for_tr(url: str = Query(..., description="URL to scrape")):
@@ -108,6 +137,7 @@ def scrape_for_tr(url: str = Query(..., description="URL to scrape")):
         return {"rows": rows}
     except Exception as e:
         return {"error": str(e)}
+
 
 @router.post("/admin/api/beautify")
 async def beautify_html(request: Request):
@@ -160,6 +190,7 @@ async def beautify_html(request: Request):
     """
 
     return {"beautified": wrapped_html}
+
 
 @router.get("/admin/api/scrape")
 def trigger_scraper(request: Request):
