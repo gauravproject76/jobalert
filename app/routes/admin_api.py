@@ -30,7 +30,7 @@ class PostModel(BaseModel):
     title: str
     sup: str
     url: str
-    preferences: str
+    preferences: List[str]
     category: str
     content: str
 
