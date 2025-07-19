@@ -9,6 +9,8 @@ from app.core.scraper import scrape_and_update
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 from bson import ObjectId
+from typing import List
+
 
 load_dotenv()
 
