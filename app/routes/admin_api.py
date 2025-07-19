@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from bs4 import BeautifulSoup
 import requests
 import os
+from datetime import datetime
 from app.deps.auth import verify_api_key
 from app.core.scraper import scrape_and_update
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -32,6 +33,7 @@ class PostModel(BaseModel):
     state: str
     category: str
     content: str
+
 
 class SearchModel(BaseModel):
     keyword: str = ""
@@ -74,10 +76,10 @@ async def search_posts(data: SearchModel):
             "url": 1,
             "category": 1,
             "sup": 1,
-            "updated_at": 1,
+            "updatedAt": 1,
             "_id": 1
         }
-    ).sort("updated_at", -1)
+    ).sort("updatedAt", -1)
 
     posts = await cursor.to_list(length=20 if data.keyword else 10)
 
@@ -101,11 +103,20 @@ async def add_or_update_post(data: PostModel):
     query = {match_field: match_value}
     post = await Post.find_one(query)
 
+    now = datetime.utcnow()
+
     if post:
-        await Post.update_one(query, {"$set": data.dict()})
+        # update existing post
+        update_data = data.dict()
+        update_data["updatedAt"] = now
+        await Post.update_one(query, {"$set": update_data})
         msg = "✅ Post updated"
     else:
-        await Post.insert_one(data.dict())
+        # insert new post
+        insert_data = data.dict()
+        insert_data["createdAt"] = now
+        insert_data["updatedAt"] = now
+        await Post.insert_one(insert_data)
         msg = "✅ Post created"
 
     updated = await Scrapeed.find_one_and_update(
