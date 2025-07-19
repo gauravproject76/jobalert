@@ -9,6 +9,8 @@ router = APIRouter()
 client = AsyncIOMotorClient(os.getenv("MONGO_URI"))
 db = client["rojgar"]
 Device = db["devices"]
+CenterBoard = db["centerboard"]
+StateBoard = db["state"]
 
 # Pydantic schema
 class RegisterDeviceModel(BaseModel):
@@ -63,3 +65,23 @@ async def register_device(data: RegisterDeviceModel):
     except Exception as e:
         print("❌ Error in /register-device:", str(e))
         raise HTTPException(status_code=500, detail="Server error")
+
+
+# 📤 Fetch board data from centerboard and state
+@router.get("/boards")
+async def get_boards():
+    try:
+        center_cursor = CenterBoard.find({}, {"_id": 0})
+        state_cursor = StateBoard.find({}, {"_id": 0})
+
+        center_boards = await center_cursor.to_list(length=100)
+        state_boards = await state_cursor.to_list(length=100)
+
+        return {
+            "centerBoards": center_boards,
+            "stateBoards": state_boards
+        }
+
+    except Exception as e:
+        print("❌ Error fetching board data:", str(e))
+        raise HTTPException(status_code=500, detail="Failed to fetch board data")
