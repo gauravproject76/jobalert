@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+from typing import List
 
 router = APIRouter()
 
@@ -19,7 +20,7 @@ class RegisterDeviceModel(BaseModel):
     brand: str = None
     model: str = None
     expoPushToken: str = None
-    preferences: dict = None
+    preferences: List[str] = None
 
 @router.post("/register-device")
 async def register_device(data: RegisterDeviceModel):
