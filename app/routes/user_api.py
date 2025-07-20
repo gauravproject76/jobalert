@@ -30,9 +30,11 @@ class PostModel(BaseModel):
 
 # Utility to safely convert datetime fields
 def convert_datetime_fields(doc):
-    if doc:
-        if "updatedAt" in doc and isinstance(doc["updatedAt"], datetime):
-            doc["updatedAt"] = doc["updatedAt"].isoformat()
+    doc["_id"] = str(doc["_id"])
+    if "createdAt" in doc and hasattr(doc["createdAt"], "isoformat"):
+        doc["createdAt"] = doc["createdAt"].isoformat()
+    if "updatedAt" in doc and hasattr(doc["updatedAt"], "isoformat"):
+        doc["updatedAt"] = doc["updatedAt"].isoformat()
     return doc
 
 # 🔹 GET /posts — Get latest 20 posts, optionally filtered by category
