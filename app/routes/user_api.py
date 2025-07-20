@@ -37,6 +37,10 @@ async def get_posts(category: Optional[str] = Query(None)):
 
     cursor = Post.find(query).sort("updatedAt", -1).limit(20)
     posts = await cursor.to_list(length=20)
+    for post in posts:
+        if "updatedAt" in post and isinstance(post["updatedAt"], datetime):
+            post["updatedAt"] = post["updatedAt"].isoformat()
+
     return posts
 
 
