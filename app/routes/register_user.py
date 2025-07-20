@@ -20,7 +20,7 @@ class RegisterDeviceModel(BaseModel):
     brand: str = None
     model: str = None
     expoPushToken: str = None
-    preferences: str = None
+    preferences: Optional[str] = None
 
 @router.post("/register-device")
 async def register_device(data: RegisterDeviceModel):
