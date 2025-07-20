@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 from typing import List
+from typing import Optional
+
 
 router = APIRouter()
 
