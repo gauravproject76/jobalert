@@ -8,7 +8,6 @@ from app.deps.auth_user import verify_api_key_user
 from dotenv import load_dotenv
 from datetime import datetime
 
-
 load_dotenv()
 
 router = APIRouter(dependencies=[Depends(verify_api_key_user)])
@@ -20,15 +19,21 @@ Device = db["devices"]
 Scrapeed = db["scrapeeds"]
 Post = db["posts"]
 
-
 # Pydantic model for response
 class PostModel(BaseModel):
     title: Optional[str]
     url: Optional[str]
+    sup: Optional[str]
     content: Optional[str]
-    updatedAt: Optional[str]
+    updatedAt: Optional[str]  # Note: we ensure it's returned as string
     category: Optional[str] = Field(None, example="jobs")
 
+# Utility to safely convert datetime fields
+def convert_datetime_fields(doc):
+    if doc:
+        if "updatedAt" in doc and isinstance(doc["updatedAt"], datetime):
+            doc["updatedAt"] = doc["updatedAt"].isoformat()
+    return doc
 
 # 🔹 GET /posts — Get latest 20 posts, optionally filtered by category
 @router.get("/posts", response_model=List[PostModel])
@@ -39,12 +44,7 @@ async def get_posts(category: Optional[str] = Query(None)):
 
     cursor = Post.find(query).sort("updatedAt", -1).limit(20)
     posts = await cursor.to_list(length=20)
-    for post in posts:
-        if "updatedAt" in post and isinstance(post["updatedAt"], datetime):
-            post["updatedAt"] = post["updatedAt"].isoformat()
-
-    return posts
-
+    return [convert_datetime_fields(post) for post in posts]
 
 # 🔹 GET /search?q= — Search posts by title
 @router.get("/search")
@@ -58,8 +58,8 @@ async def search_posts(q: Optional[str] = Query(None)):
 
     cursor = Post.find(query).sort("_id", -1).limit(limit)
     posts = await cursor.to_list(length=limit)
+    posts = [convert_datetime_fields(post) for post in posts]
     return {"posts": posts}
-
 
 # 🔹 GET /view?title=...&url=... — View a single post by title or URL
 @router.get("/view")
@@ -79,4 +79,5 @@ async def view_post(title: Optional[str] = None, url: Optional[str] = None):
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
+    post = convert_datetime_fields(post)
     return {"content": post.get("content"), "title": post.get("title")}
