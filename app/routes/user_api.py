@@ -58,7 +58,7 @@ async def search_posts(q: Optional[str] = Query(None)):
         query = {}
         limit = 10
 
-    cursor = Post.find(query).sort("_id", -1).limit(limit)
+    cursor = Post.find(query).sort("updatedAt", -1).limit(limit)
     posts = await cursor.to_list(length=limit)
     posts = [convert_datetime_fields(post) for post in posts]
     return {"posts": posts}
