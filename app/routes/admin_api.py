@@ -67,6 +67,23 @@ async def get_posts():
     return posts
 
 
+
+EXPO_API_URL = "https://exp.host/--/api/v2/push/send"
+
+def send_push_notification(tokens: List[str], title: str, body: str):
+    messages = [{"to": token, "title": title, "body": body} for token in tokens]
+
+    # Split into chunks of 100 (Expo limit)
+    for i in range(0, len(messages), 100):
+        chunk = messages[i:i+100]
+        try:
+            response = requests.post(EXPO_API_URL, json=chunk)
+            if response.status_code != 200:
+                print("Expo push failed:", response.text)
+        except Exception as e:
+            print("Error sending push:", str(e))
+
+
 @router.post("/admin/api/search-posts")
 async def search_posts(data: SearchModel):
     query = {"title": {"$regex": data.keyword, "$options": "i"}} if data.keyword else {}
@@ -121,6 +138,7 @@ async def add_or_update_post(data: PostModel):
         await Post.insert_one(insert_data)
         msg = "✅ Post created"
 
+    # Mark scraped post as posted
     updated = await Scrapeed.find_one_and_update(
         {"title": data.title.strip()},
         {"$set": {"posted": "Yes"}},
@@ -133,8 +151,38 @@ async def add_or_update_post(data: PostModel):
             {"$set": {"posted": "Yes"}},
         )
 
-    return {"success": True, "message": msg, "post": data.dict()}
+    # ✅ Send Notification
+    post_preferences = data.preferences or []
 
+    if post_preferences:
+        filter_query = {
+            "role": "user",
+            "$or": [
+                {"preferences": {"$in": post_preferences}},  # any matching preference
+                {"preferences": {"$size": 0}},               # empty array
+                {"preferences": {"$exists": False}}          # missing field
+            ]
+        }
+    else:
+        filter_query = {"role": "user"}
+
+    user_devices = await Device.find(filter_query).to_list(None)
+    push_tokens = [u.get("expoPushToken") for u in user_devices if u.get("expoPushToken")]
+
+    notif_title = data.title
+    if data.category.lower() == "latest job":
+        notif_body = f"Apply now — {data.sup}"
+    else:
+        notif_body = f"Check now — {data.sup}"
+
+    if push_tokens:
+        send_push_notification(
+            push_tokens,
+            title=notif_title,
+            body=notif_body
+        )
+
+    return {"success": True, "message": msg, "post": data.dict()}
 
 @router.get("/admin/api/scrape-for-tr")
 def scrape_for_tr(url: str = Query(..., description="URL to scrape")):
