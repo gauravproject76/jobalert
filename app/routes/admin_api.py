@@ -73,15 +73,19 @@ EXPO_API_URL = "https://exp.host/--/api/v2/push/send"
 def send_push_notification(tokens: List[str], title: str, body: str):
     messages = [{"to": token, "title": title, "body": body} for token in tokens]
 
-    # Split into chunks of 100 (Expo limit)
     for i in range(0, len(messages), 100):
-        chunk = messages[i:i+100]
+        chunk = messages[i:i + 100]
+        print("📦 Sending chunk:", chunk)  # <-- Add this
+
         try:
             response = requests.post(EXPO_API_URL, json=chunk)
+            print("📨 Expo response:", response.status_code, response.text)  # <-- Add this
+
             if response.status_code != 200:
-                print("Expo push failed:", response.text)
+                print("❌ Expo push failed:", response.text)
+
         except Exception as e:
-            print("Error sending push:", str(e))
+            print("🔥 Error sending push:", str(e))
 
 
 @router.post("/admin/api/search-posts")
