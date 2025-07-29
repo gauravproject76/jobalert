@@ -129,20 +129,17 @@ async def add_or_update_post(data: PostModel):
     now = datetime.utcnow()
 
     if post:
-        # update existing post
         update_data = data.dict()
         update_data["updatedAt"] = now
         await Post.update_one(query, {"$set": update_data})
         msg = "✅ Post updated"
     else:
-        # insert new post
         insert_data = data.dict()
         insert_data["createdAt"] = now
         insert_data["updatedAt"] = now
         await Post.insert_one(insert_data)
         msg = "✅ Post created"
 
-    # Mark scraped post as posted
     updated = await Scrapeed.find_one_and_update(
         {"title": data.title.strip()},
         {"$set": {"posted": "Yes"}},
@@ -152,7 +149,7 @@ async def add_or_update_post(data: PostModel):
     if not updated:
         await Scrapeed.find_one_and_update(
             {"title": {"$regex": f"^{data.title.strip()}$", "$options": "i"}},
-            {"$set": {"posted": "Yes"}},
+            {"$set": {"posted": "Yes"}}
         )
 
     # ✅ Send Notification
@@ -162,9 +159,9 @@ async def add_or_update_post(data: PostModel):
         filter_query = {
             "role": "user",
             "$or": [
-                {"preferences": {"$in": post_preferences}},  # any matching preference
-                {"preferences": {"$size": 0}},               # empty array
-                {"preferences": {"$exists": False}}          # missing field
+                {"preferences": {"$in": post_preferences}},
+                {"preferences": {"$size": 0}},
+                {"preferences": {"$exists": False}}
             ]
         }
     else:
@@ -180,11 +177,18 @@ async def add_or_update_post(data: PostModel):
         notif_body = f"Check now — {data.sup}"
 
     if push_tokens:
-        send_push_notification(
-            push_tokens,
-            title=notif_title,
-            body=notif_body
-        )
+        try:
+            print("📱 Sending to tokens:", push_tokens)
+            send_push_notification(
+                push_tokens,
+                title=notif_title,
+                body=notif_body
+            )
+            print("✅ Push sent.")
+        except Exception as e:
+            print("❌ Error sending push notification:")
+            print(str(e))
+          
 
     return {"success": True, "message": msg, "post": data.dict()}
 
