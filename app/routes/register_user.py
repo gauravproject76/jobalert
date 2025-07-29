@@ -67,15 +67,12 @@ async def register_device(data: RegisterDeviceModel):
         else:
             print("ℹ️ Device already exists:", existing)
 
-            # Update preferences only if not already stored
-            if cleaned_preferences and not existing.get("preferences"):
+            if cleaned_preferences:
                 await Device.update_one(
-                    {"deviceId": data.deviceId},
-                    {"$set": {"preferences": cleaned_preferences}}
+                     {"deviceId": data.deviceId},
+                     {"$set": {"preferences": cleaned_preferences}}
                 )
                 print("🔄 Preferences updated for existing device")
-
-            return {"status": "already exists"}
 
     except Exception as e:
         print("❌ Error in /register-device:", str(e))
