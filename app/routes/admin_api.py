@@ -170,7 +170,7 @@ async def add_or_update_post(data: PostModel):
     push_tokens = [u.get("expoPushToken") for u in user_devices if u.get("expoPushToken")]
 
     notif_title = data.title
-    if data.category.lower() == "latest job":
+    if data.category.strip().lower().replace(" ", "") == "latestjobs":
         notif_body = f"Apply now — {data.sup}"
     else:
         notif_body = f"Check now — {data.sup}"
