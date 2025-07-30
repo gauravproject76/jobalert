@@ -87,7 +87,50 @@ def send_push_notification(tokens: List[str], title: str, body: str):
         except Exception as e:
             print("🔥 Error sending push:", str(e))
 
+def send_telegram_post(title: str, sup: str, category: str, preferences: List[str]):
+    import requests
+    from urllib.parse import quote
 
+    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
+    APP_DOWNLOAD_URL = os.getenv("APP_DOWNLOAD_URL", "https://jobalertapk.netlify.app")
+
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHANNEL_ID:
+        print("❌ Telegram config missing.")
+        return
+
+    # Dynamic Hashtags
+    base_tags = {"ResultBharat", "SarkariResult", "JobAlert"}
+    if category:
+        base_tags.add(category.strip().replace(" ", "").capitalize())
+    for pref in preferences:
+        if pref.strip():
+            base_tags.add(pref.strip().replace(" ", "").capitalize())
+
+    hashtags = " ".join(f"#{tag}" for tag in sorted(base_tags))
+
+    message = f"""📢 <b>{title}</b> 🎤
+🗓️ {sup}
+
+{hashtags}
+
+🔗 <b>Download App:</b>
+👉 {APP_DOWNLOAD_URL}
+
+📲 इस जानकारी को शेयर करें और अपडेट रहें! ✅"""
+
+    url_encoded_message = quote(message)
+    telegram_api_url = (
+        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        f"?chat_id={TELEGRAM_CHANNEL_ID}&text={url_encoded_message}&parse_mode=HTML"
+    )
+
+    try:
+        response = requests.get(telegram_api_url)
+        print("📬 Telegram Response:", response.status_code, response.text)
+    except Exception as e:
+        print("🔥 Telegram post failed:", str(e))
+        
 @router.post("/admin/api/search-posts")
 async def search_posts(data: SearchModel):
     query = {"title": {"$regex": data.keyword, "$options": "i"}} if data.keyword else {}
@@ -152,7 +195,7 @@ async def add_or_update_post(data: PostModel):
             {"$set": {"posted": "Yes"}}
         )
 
-    # ✅ Send Notification
+    # ✅ Send Push Notification
     post_preferences = data.preferences or []
 
     if post_preferences:
@@ -174,10 +217,7 @@ async def add_or_update_post(data: PostModel):
     push_tokens = [u.get("expoPushToken") for u in user_devices if u.get("expoPushToken")]
 
     notif_title = data.title
-    if data.category.strip().lower().replace(" ", "") == "latestjobs":
-        notif_body = f"Apply now — {data.sup}"
-    else:
-        notif_body = f"Check now — {data.sup}"
+    notif_body = f"Apply now — {data.sup}" if data.category.strip().lower().replace(" ", "") == "latestjobs" else f"Check now — {data.sup}"
 
     if push_tokens:
         try:
@@ -191,10 +231,20 @@ async def add_or_update_post(data: PostModel):
         except Exception as e:
             print("❌ Error sending push notification:")
             print(str(e))
-          
+
+    # ✅ Send Telegram Post
+    try:
+        send_telegram_post(
+            title=data.title,
+            sup=data.sup,
+            category=data.category,
+            preferences=data.preferences
+        )
+    except Exception as e:
+        print("❌ Telegram send error:", str(e))
 
     return {"success": True, "message": msg, "post": data.dict()}
-
+    
 @router.get("/admin/api/scrape-for-tr")
 def scrape_for_tr(url: str = Query(..., description="URL to scrape")):
     try:
