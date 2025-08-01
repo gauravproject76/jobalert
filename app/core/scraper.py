@@ -112,13 +112,20 @@ def scrape_and_update():
 
             existing = collection.find_one(key)
 
-            # ✅ Logic: allow insert even if sup is empty; skip update if sup is empty
+            # ✅ Updated logic for both special and normal URLs
             if not existing:
                 should_update = True
-            elif sup:
-                should_update = existing.get("sup") != sup
             else:
-                should_update = False
+                if special:
+                    # For special URLs, update if sup changed
+                    should_update = sup and existing.get("sup") != sup
+                else:
+                    # For normal URLs, update if title, url, or sup changed
+                    should_update = (
+                        existing.get("title") != title or
+                        existing.get("url") != url or
+                        (sup and existing.get("sup") != sup)
+                    )
 
             if should_update:
                 document = {
@@ -147,7 +154,6 @@ def scrape_and_update():
                 "$nor": [{"url": k} if "http" in k else {"title": k} for k in valid_keys]
             })
 
-    # ✅ Notify admins if any updates occurred
     if updated_count > 0:
         send_push_to_admins(
             "Job Alert Admin",
@@ -158,4 +164,4 @@ def scrape_and_update():
         "status": "ok",
         "upserted_or_updated": updated_count,
         "sections": len(TARGET_SECTIONS)
-    }
+            }
